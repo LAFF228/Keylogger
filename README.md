@@ -24,15 +24,15 @@ This keylogger provides 3 types of information from the target machine ->
 This keylogger is staged in nature :)
 soo it downloads each of the above mentioned features as 3 different .dlls from a server straight to your " memory " not the disk :)
 
-Yes, the malicious .dlls never touches the disk and gets loaded and executed directly from the memory !!
-This instantly bypasses any disk scans
+Yes, the malicious .dlls never touches the disk and gets loaded and executed directly from the memory ( Reflective dll loading )
+This instantly bypasses any disk scans. This is done using a custom modification of MemoryModule.h which has been modified to be more stealthy.
 > Neat right?
 ```markdown
 This Keylogger uses techniques such as ->
->   1) Dynamic function linking               [To avoid entries in the import tables]
+>   1) Dynamic function linking                 [To avoid entries in the import tables]
 >   2) Various Obsfuscation techniques
->   3) Loading dlls from memory               [as discussed earlier]
->   4) Anti-debugging techniques              [Under development]
+>   3) Reflective dll loading                   [as discussed earlier]
+>   4) Anti-debugging techniques                [Under development]
 >   5) Custom Networking protocol
 >   6) Remote command and control
 ```
