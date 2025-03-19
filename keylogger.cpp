@@ -4,7 +4,7 @@
     use encrypted dlls next
 */
 #define WIN32_LEAN_AND_MEAN
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG
     #include <iostream>
